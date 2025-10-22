@@ -9,4 +9,4 @@ Public datasets DroneRF and DroneRFa
 pip install -r requirements.txt
 
 4. Usage methods
-Firstly, download the public datasets DroneRF and DroneRFa, then partition them into datasets and generate spectrograms to obtain the spectrogram dataset. Next, train it using RF_TCNet_Train.exe, and finally test it using RF_TCNet_Test. py
+Firstly, download the public datasets DroneRF and DroneRFa, and then perform ECSG on them to generate spectrograms, thereby obtaining the spectrogram dataset. Then use dataset partitioning code to randomly divide it into training set, validation set, and testing set. Next, train it using RF_TCNet_Train.exe, and finally test it using RF_TCNet_Test. py
