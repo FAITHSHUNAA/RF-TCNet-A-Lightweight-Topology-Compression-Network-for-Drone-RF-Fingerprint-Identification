@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class DynamicFrequencyAttention(nn.Module):
-    """动态频率注意力模块"""
+    """Dynamic Frequency Attention Module"""
 
     def __init__(self, in_channels, reduction_ratio=16):
         super().__init__()
@@ -24,10 +24,10 @@ class DynamicFrequencyAttention(nn.Module):
         )
 
     def forward(self, x):
-        # 通道注意力
+        # Channel Attention
         ca = self.channel_attention(x)
 
-        # 频率注意力
+        # Frequency Attention
         batch, ch, freq, time = x.size()
         fa_input = x.mean(dim=-1)  # [B,C,F]
         fa = self.frequency_attention(fa_input).unsqueeze(-1)  # [B,C,F,1]
@@ -36,14 +36,14 @@ class DynamicFrequencyAttention(nn.Module):
 
 
 class EnergyTopologyPooling(nn.Module):
-    """能量拓扑池化模块（关键修复）"""
+    """Energy topological pooling module"""
 
-    def __init__(self, pool_size=2, stride=2):  # 修改池化参数
+    def __init__(self, pool_size=2, stride=2):
         super().__init__()
         self.pool = nn.AvgPool2d(
             kernel_size=(1, pool_size),
             stride=(1, stride),
-            padding=(0, pool_size // 2)  # 添加padding保持尺寸对齐
+            padding=(0, pool_size // 2) 
         )
 
     def forward(self, x):
@@ -53,14 +53,14 @@ class EnergyTopologyPooling(nn.Module):
 
 
 class RFTCNetBlock(nn.Module):
-    """RF-TCNet基础模块（关键修复）"""
+    """RF-TCNet basic module"""
 
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
-        # 修改卷积参数保持尺寸对齐
+        # Modify convolution parameters while maintaining size alignment
         self.dw_conv = nn.Sequential(
             nn.Conv2d(in_ch, in_ch, 3,
-                      stride=1,  # 固定stride=1，降采样由池化完成
+                      stride=1, 
                       padding=1, groups=in_ch, bias=False),
             nn.BatchNorm2d(in_ch),
             nn.ReLU(inplace=True))
@@ -71,7 +71,7 @@ class RFTCNetBlock(nn.Module):
             nn.Conv2d(in_ch, out_ch, 1, bias=False),
             nn.BatchNorm2d(out_ch))
 
-        # 统一降采样方式
+        # Uniform downsampling method
         if stride == 2:
             self.etp = EnergyTopologyPooling(pool_size=2, stride=2)
             self.res_pool = nn.AvgPool2d(kernel_size=2, stride=2)
@@ -97,28 +97,28 @@ class RFTCNetBlock(nn.Module):
         if self.etp is not None:
             x = self.etp(x)
 
-        # 这里使用F.interpolate来确保residual和x的尺寸匹配
+        # Use F.interpolate to ensure that the sizes of residual and x are matched.
         if self.res_pool is not None:
             residual = self.res_pool(residual)
 
-        # 调整residual的尺寸以匹配x
+        # Adjust the size of residual to match x
         residual = F.interpolate(residual, size=x.shape[2:], mode='bilinear', align_corners=False)
 
         return F.relu(x + residual)
 
 
 class RF_TCNet(nn.Module):
-    """完整的RF-TCNet模型"""
+    """The complete RF-TCNet model"""
 
     def __init__(self, num_classes=25):
         super().__init__()
         self.stem = nn.Sequential(
-            nn.Conv2d(1, 16, 3, stride=2, padding=1),  # 输入为单通道时频图
+            nn.Conv2d(1, 16, 3, stride=2, padding=1), 
             nn.BatchNorm2d(16),
             nn.ReLU(inplace=True)
         )
 
-        # 构建特征提取器
+        # Build a feature extractor
         self.features = nn.Sequential(
             RFTCNetBlock(16, 32, stride=2),
             RFTCNetBlock(32, 64),
@@ -126,7 +126,7 @@ class RF_TCNet(nn.Module):
             RFTCNetBlock(128, 256),
         )
 
-        # 分类头
+        # Classification Head
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
@@ -139,16 +139,16 @@ class RF_TCNet(nn.Module):
 
 
 # ----------------------
-# 模型参数量验证
+# Model parameter quantity verification
 # ----------------------
 if __name__ == "__main__":
     model = RF_TCNet(num_classes=25)
     print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.3f}M")
 
-    # 测试输入：batch_size=2, 1 channel, 128x128
+    # test input：batch_size=2, 1 channel, 128x128
     x = torch.randn(2, 1, 128, 128)
     try:
         out = model(x)
-        print("Output shape:", out.shape)  # 预期输出: [2, 25]
+        print("Output shape:", out.shape)
     except Exception as e:
         print("Error:", e)
