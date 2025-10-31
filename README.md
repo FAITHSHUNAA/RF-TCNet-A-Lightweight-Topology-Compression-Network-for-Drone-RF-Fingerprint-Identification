@@ -18,8 +18,6 @@ Dataset description Public datasets DroneRF and DroneRFa.
 # Installation
 Clone this repository and install dependencies:
 git clone https://github.com/FAITHSHUNAA/RF-TCNet-A-Lightweight-Topology-Compression-Network-for-Drone-RF-Fingerprint-Identification.git
-cd UAV-RF-TCNet
-pip install -r requirements.txt
 
 # Usage
 Prepare spectrograms
