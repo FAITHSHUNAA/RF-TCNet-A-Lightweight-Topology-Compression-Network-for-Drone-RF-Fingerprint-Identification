@@ -8,19 +8,19 @@ from tkinter import filedialog
 from tkinter import Tk
 
 
-# 选择文件夹
+# select folder
 def select_directory():
     root = Tk()
-    root.withdraw()  # 不显示主窗口
-    folder_path = filedialog.askdirectory(title="选择.mat文件所在的文件夹")
+    root.withdraw()  # Do not display the main window
+    folder_path = filedialog.askdirectory(title="Select the folder where the .mat file is located")
     return folder_path
 
 
-# 选择多个.mat文件
+# Select multiple .mat files
 def select_mat_files(folder_path):
     mat_files = glob.glob(os.path.join(folder_path, '*.mat'))
     selected_files = filedialog.askopenfilenames(
-        title="选择一个或者多个.mat文件",
+        title="Select one or more .mat files",
         initialdir=folder_path,
         filetypes=[("MAT Files", "*.mat")]
     )
@@ -28,14 +28,14 @@ def select_mat_files(folder_path):
 
 
 def process_mat_files(mat_files, output_base_folder):
-    # 预处理：计算全局最大幅度和 dB 范围
+    # Preprocessing: Calculate the global maximum amplitude and dB range
     global_max_amplitude = -np.inf
     for mat_file in mat_files:
         data = h5py.File(mat_file, 'r')
         RF0_I = data['RF0_I'][0]
         global_max_amplitude = max(global_max_amplitude, np.max(np.abs(RF0_I)))
 
-    # 计算全局 dB 范围
+    # Calculate the global dB range
     global_min_dB = +np.inf
     global_max_dB = -np.inf
     for mat_file in mat_files:
@@ -53,7 +53,7 @@ def process_mat_files(mat_files, output_base_folder):
             global_min_dB = min(global_min_dB, np.min(log_spec))
             global_max_dB = max(global_max_dB, np.max(log_spec))
 
-    # 处理并保存时频图
+    # Process and save the time-frequency graph
     for mat_file in mat_files:
         data = h5py.File(mat_file, 'r')
         RF0_I = data['RF0_I'][0]
@@ -84,14 +84,14 @@ def save_spectrogram(spectrogram, output_folder, file_name, index, vmin, vmax):
     plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-# 主程序
+# main
 if __name__ == '__main__':
-    # 选择输入文件夹并获取用户选择的.mat文件
+    # Select the input folder and obtain the .mat file selected by the user
     folder_path = select_directory()
     selected_files = select_mat_files(folder_path)
 
-    # 选择输出文件夹
-    output_folder = filedialog.askdirectory(title="选择时频图保存文件夹")
+    # Select output folder
+    output_folder = filedialog.askdirectory(title="Select the folder for saving the time-frequency graph")
 
-    # 批量处理所选.mat文件
+    # Batch processing of the selected .mat files
     process_mat_files(selected_files, output_folder)
