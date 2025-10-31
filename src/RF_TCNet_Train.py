@@ -10,47 +10,47 @@ from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 import numpy as np
 
-# 数据转换操作
+# Data conversion
 transform = transforms.Compose([
-    transforms.Resize((128, 128)),  # 调整大小为128x128
-    transforms.Grayscale(num_output_channels=1),  # 确保是单通道（时频图）
-    transforms.ToTensor(),  # 转换为Tensor
-    transforms.Normalize(mean=[0.5], std=[0.5])  # 归一化
+    transforms.Resize((128, 128)),  # Resize: 128x128
+    transforms.Grayscale(num_output_channels=1),
+    transforms.ToTensor(),  # Convert to Tensor
+    transforms.Normalize(mean=[0.5], std=[0.5])  # normalization
 ])
 
-# 加载训练集和验证集
+# Load the training set and validation set
 train_data = datasets.ImageFolder(root=r"/media/zyj/My Passport/RFa/DroneRFa/3000K_1.5_1_ALL/train", transform=transform)
 val_data = datasets.ImageFolder(root=r"/media/zyj/My Passport/RFa/DroneRFa/3000K_1.5_1_ALL/val", transform=transform)
 
-# 使用DataLoader进行批量加载数据
+# Use DataLoader for batch data loading
 train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=32, shuffle=False)
 
-# 初始化RF-TCNet模型
-model = RF_TCNet(num_classes=25)  # 25类分类任务
+# Initialize the RF-TCNet model
+model = RF_TCNet(num_classes=25) 
 
-# 将模型移到GPU（如果有GPU）
+# Move the model to the GPU (if there is one)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
 # ----------------------
-# 模型参数量验证
+# Model parameter quantity verification
 # ----------------------
 print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
 
-# 定义损失函数和优化器
-criterion = nn.CrossEntropyLoss()  # 交叉熵损失函数用于分类任务
-optimizer = optim.Adam(model.parameters(), lr=0.0002)  # 使用Adam优化器
+# Define the loss function and the optimizer
+criterion = nn.CrossEntropyLoss()  # The cross-entropy loss function is used for classification tasks.
+optimizer = optim.Adam(model.parameters(), lr=0.0002)  # Use the Adam optimizer
 
-# 用于记录训练过程中的损失和准确率
+# Used to record the loss and accuracy during the training process
 train_losses = []
 train_accuracies = []
 val_losses = []
 val_accuracies = []
 
-# 训练函数
+# Training function
 def train(model, train_loader, criterion, optimizer, device):
-    model.train()  # 设置为训练模式
+    model.train()  # Set to training mode
     running_loss = 0.0
     correct = 0
     total = 0
@@ -58,18 +58,18 @@ def train(model, train_loader, criterion, optimizer, device):
     for images, labels in train_loader:
         images, labels = images.to(device), labels.to(device)
 
-        # 前向传播
+        # Forward propagation
         optimizer.zero_grad()
         outputs = model(images)
 
-        # 计算损失
+        # Calculate the loss
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
 
-        # 计算准确率
+        # Calculate the accuracy rate
         _, predicted = torch.max(outputs, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
@@ -78,25 +78,25 @@ def train(model, train_loader, criterion, optimizer, device):
     accuracy = 100 * correct / total
     return avg_loss, accuracy
 
-# 验证函数
+# Verification function
 def validate(model, val_loader, criterion, device):
-    model.eval()  # 设置为评估模式
+    model.eval()  # Set to evaluation mode
     running_loss = 0.0
     correct = 0
     total = 0
 
-    with torch.no_grad():  # 不计算梯度
+    with torch.no_grad():  # Do not calculate the gradient
         for images, labels in val_loader:
             images, labels = images.to(device), labels.to(device)
 
-            # 前向传播
+            # Forward propagation
             outputs = model(images)
 
-            # 计算损失
+            # Calculate the loss
             loss = criterion(outputs, labels)
             running_loss += loss.item()
 
-            # 计算准确率
+            # Calculate the accuracy rate
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -105,36 +105,36 @@ def validate(model, val_loader, criterion, device):
     accuracy = 100 * correct / total
     return avg_loss, accuracy
 
-# 训练和验证循环
-num_epochs = 20  # 训练的轮数
+# Training and validation loop
+num_epochs = 20  # Number of training rounds
 
 best_accuracy = 0.0
 for epoch in range(num_epochs):
     print(f'Epoch {epoch + 1}/{num_epochs}')
 
-    # 训练模型
+    # train model
     train_loss, train_accuracy = train(model, train_loader, criterion, optimizer, device)
     train_losses.append(train_loss)
     train_accuracies.append(train_accuracy)
     print(f'Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%')
 
-    # 验证模型
+    # val model
     val_loss, val_accuracy = validate(model, val_loader, criterion, device)
     val_losses.append(val_loss)
     val_accuracies.append(val_accuracy)
     print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%')
 
-    # 保存最佳模型
+    # Save the best model
     if val_accuracy > best_accuracy:
         best_accuracy = val_accuracy
         torch.save(model.state_dict(), 'NO_ECSG_best_model.pth')
         print(f"Saved Best Model with Accuracy: {best_accuracy:.2f}%")
 
-# 评估模型
+# evaluation model
 model.load_state_dict(torch.load('NO_ECSG_best_model.pth'))
-model.eval()  # 设置为评估模式
+model.eval()  # Set to evaluation mode
 
-# 获取验证集上的真实标签和预测标签
+# Obtain the true labels and predicted labels on the validation set
 all_labels = []
 all_preds = []
 with torch.no_grad():
@@ -145,12 +145,12 @@ with torch.no_grad():
         all_labels.extend(labels.cpu().numpy())
         all_preds.extend(preds.cpu().numpy())
 
-# 打印分类报告
+# Print the classification report
 print("Classification Report:")
 print(classification_report(all_labels, all_preds, target_names=train_data.classes))
 
-# 绘制训练过程中的loss和accuracy
-# 训练集和验证集的损失图
+# Plot the loss and accuracy during the training process
+# Loss graphs of the training set and validation set
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
 plt.plot(range(num_epochs), train_losses, label='Train Loss')
@@ -160,7 +160,7 @@ plt.ylabel('Loss')
 plt.legend()
 plt.title('Train and Validation Loss')
 
-# 训练集和验证集的准确率图
+# Accuracy graphs of the training set and the validation set
 plt.subplot(1, 2, 2)
 plt.plot(range(num_epochs), train_accuracies, label='Train Accuracy')
 plt.plot(range(num_epochs), val_accuracies, label='Validation Accuracy')
@@ -172,10 +172,10 @@ plt.title('Train and Validation Accuracy')
 plt.tight_layout()
 plt.show()
 
-# 混淆矩阵绘制
+# Confusion matrix plotting
 conf_matrix = confusion_matrix(all_labels, all_preds)
 
-# 使用seaborn绘制热图
+# Use seaborn to create a heatmap
 plt.figure(figsize=(10, 8))
 sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=train_data.classes, yticklabels=train_data.classes)
 plt.title('Confusion Matrix')
