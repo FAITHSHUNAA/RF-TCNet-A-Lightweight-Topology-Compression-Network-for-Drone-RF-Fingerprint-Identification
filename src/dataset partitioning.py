@@ -3,15 +3,15 @@ import random
 import shutil
 from sklearn.model_selection import train_test_split
 
-# 原始数据集路径
+# Original data set path
 dataset_dir = r"E:\RFa\DroneRFa\3000K_1.5_1_ALL"
 
-# 创建新的训练集、验证集和测试集文件夹
+# Create new folders for training set, validation set and test set
 train_dir = os.path.join(dataset_dir, 'train')
 val_dir = os.path.join(dataset_dir, 'val')
 test_dir = os.path.join(dataset_dir, 'test')
 
-# 创建训练集、验证集和测试集的根目录
+# The root directory for creating the training set, validation set and test set
 if not os.path.exists(train_dir):
     os.makedirs(train_dir)
 
@@ -21,18 +21,18 @@ if not os.path.exists(val_dir):
 if not os.path.exists(test_dir):
     os.makedirs(test_dir)
 
-# 获取类别名称（T0001, T0010, T0011等）
+# Obtain the category names (such as T0001, T0010, T0011, etc.)
 class_names = os.listdir(dataset_dir)
 
-# 遍历每个类别文件夹
+# Traverse each category folder
 for class_name in class_names:
     class_path = os.path.join(dataset_dir, class_name)
 
-    # 跳过非文件夹
+    # Skip non-folders
     if not os.path.isdir(class_path):
         continue
 
-    # 创建每个类别的训练集、验证集和测试集文件夹
+    # Create folders for training set, validation set and test set for each category
     class_train_dir = os.path.join(train_dir, class_name)
     class_val_dir = os.path.join(val_dir, class_name)
     class_test_dir = os.path.join(test_dir, class_name)
@@ -44,24 +44,24 @@ for class_name in class_names:
     if not os.path.exists(class_test_dir):
         os.makedirs(class_test_dir)
 
-    # 遍历当前类别下的所有子文件夹（每个小文件夹）
+    # Traverse all the subfolders (each small folder) under the current category
     subfolders = [f.path for f in os.scandir(class_path) if f.is_dir()]
 
-    # 对每个子文件夹中的图片进行划分
+    # Divide the pictures in each subfolder
     for subfolder in subfolders:
         images = [os.path.join(subfolder, img) for img in os.listdir(subfolder) if img.endswith(('png'))]
-        random.shuffle(images)  # 随机打乱图片
+        random.shuffle(images)  # Randomly shuffle the pictures
 
-        # 划分为7:2:1（训练集:验证集:测试集）的比例
+        # The proportion is divided into 7:2:1 (training set: validation set: test set)
         train_size = int(len(images) * 0.7)
         val_size = int(len(images) * 0.2)
 
-        # 划分训练集、验证集和测试集
+        # Divide the training set, validation set and test set
         train_images = images[:train_size]
         val_images = images[train_size:train_size + val_size]
         test_images = images[train_size + val_size:]
 
-        # 将文件拷贝到相应的训练集、验证集和测试集文件夹中
+        # Copy the file to the corresponding training set, validation set and test set folders.
         for img in train_images:
             shutil.copy(img, class_train_dir)
         for img in val_images:
@@ -69,4 +69,4 @@ for class_name in class_names:
         for img in test_images:
             shutil.copy(img, class_test_dir)
 
-print("数据集划分完成！")
+print("The dataset has been divided.！")
