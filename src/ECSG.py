@@ -28,51 +28,54 @@ def select_mat_files(folder_path):
 
 
 def process_mat_files(mat_files, output_base_folder):
-    # Preprocessing: Calculate the global maximum amplitude and dB range
-    global_max_amplitude = -np.inf
     for mat_file in mat_files:
-        data = h5py.File(mat_file, 'r')
-        RF0_I = data['RF0_I'][0]
-        global_max_amplitude = max(global_max_amplitude, np.max(np.abs(RF0_I)))
+        print(f"Processing: {os.path.basename(mat_file)}")  
 
-    # Calculate the global dB range
-    global_min_dB = +np.inf
-    global_max_dB = -np.inf
-    for mat_file in mat_files:
-        data = h5py.File(mat_file, 'r')
-        RF0_I = data['RF0_I'][0]
-        frame_size = 3_000_000
-        num_frames = len(RF0_I) // frame_size
-        for i in range(num_frames):
-            start_idx = i * frame_size
-            end_idx = (i + 1) * frame_size
-            data_ch0 = RF0_I[start_idx:end_idx]
-            data_ch0 = np.array(data_ch0, dtype=float)
-            stft = librosa.stft(data_ch0, n_fft=1024, hop_length=512, win_length=1024, window='hamming')
-            log_spec = librosa.amplitude_to_db(np.abs(stft), ref=global_max_amplitude)
-            global_min_dB = min(global_min_dB, np.min(log_spec))
-            global_max_dB = max(global_max_dB, np.max(log_spec))
+        with h5py.File(mat_file, 'r') as data:
+            RF0_I = data['RF0_I'][0]  
 
-    # Process and save the time-frequency graph
-    for mat_file in mat_files:
-        data = h5py.File(mat_file, 'r')
-        RF0_I = data['RF0_I'][0]
-        base_name = os.path.basename(mat_file).split('.')[0]
-        output_folder = os.path.join(output_base_folder, base_name)
-        os.makedirs(output_folder, exist_ok=True)
+            # Step 1: Calculate the maximum amplitude
+            file_max_amplitude = np.max(np.abs(RF0_I))
 
-        frame_size = 5_000_000
-        num_frames = len(RF0_I) // frame_size
-        for i in range(num_frames):
-            start_idx = i * frame_size
-            end_idx = (i + 1) * frame_size
-            data_ch0 = RF0_I[start_idx:end_idx]
-            data_ch0 = np.array(data_ch0, dtype=float)
+            # Step 2: Statistical dB range
+            file_min_dB = np.inf
+            file_max_dB = -np.inf
 
-            stft = librosa.stft(data_ch0, n_fft=1024, hop_length=512, win_length=1024, window='hamming')
-            log_spec = librosa.amplitude_to_db(np.abs(stft), ref=global_max_amplitude)
+            frame_size_stats = 3_000_000 
+            num_frames_stats = len(RF0_I) // frame_size_stats
 
-            save_spectrogram(log_spec, output_folder, base_name, i, global_min_dB, global_max_dB)
+            for i in range(num_frames_stats):
+                start_idx = i * frame_size_stats
+                end_idx = (i + 1) * frame_size_stats
+                segment = np.array(RF0_I[start_idx:end_idx], dtype=float)
+
+                stft = librosa.stft(segment, n_fft=1024, hop_length=512, win_length=1024, window='hamming')
+                log_spec = librosa.amplitude_to_db(np.abs(stft), ref=file_max_amplitude)
+
+                file_min_dB = min(file_min_dB, np.min(log_spec))
+                file_max_dB = max(file_max_dB, np.max(log_spec))
+
+            if file_min_dB == np.inf:
+                file_min_dB = -80
+                file_max_dB = 0
+
+            # Step 3: Generate and save the official score
+            base_name = os.path.basename(mat_file).split('.')[0]
+            output_folder = os.path.join(output_base_folder, base_name)
+            os.makedirs(output_folder, exist_ok=True)
+
+            frame_size_final = 3_000_000 
+            num_frames_final = len(RF0_I) // frame_size_final
+
+            for i in range(num_frames_final):
+                start_idx = i * frame_size_final
+                end_idx = (i + 1) * frame_size_final
+                segment = np.array(RF0_I[start_idx:end_idx], dtype=float)
+
+                stft = librosa.stft(segment, n_fft=1024, hop_length=512, win_length=1024, window='hamming')
+                log_spec = librosa.amplitude_to_db(np.abs(stft), ref=file_max_amplitude)
+
+                save_spectrogram(log_spec, output_folder, base_name, i, file_min_dB, file_max_dB)
 
 
 def save_spectrogram(spectrogram, output_folder, file_name, index, vmin, vmax):
@@ -84,14 +87,19 @@ def save_spectrogram(spectrogram, output_folder, file_name, index, vmin, vmax):
     plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0)
     plt.close()
 
+
 # main
 if __name__ == '__main__':
     # Select the input folder and obtain the .mat file selected by the user
     folder_path = select_directory()
     selected_files = select_mat_files(folder_path)
 
-    # Select output folder
-    output_folder = filedialog.askdirectory(title="Select the folder for saving the time-frequency graph")
-
-    # Batch processing of the selected .mat files
-    process_mat_files(selected_files, output_folder)
+    if not selected_files:
+        print("No files selected, exiting.")
+    else:
+        # Select output folder
+        output_folder = filedialog.askdirectory(title="Select the folder for saving the time-frequency graph")
+        if output_folder:
+            # Batch processing of the selected .mat files
+            process_mat_files(selected_files, output_folder)
+            print("All files processed successfully!")
